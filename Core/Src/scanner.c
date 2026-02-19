@@ -6,7 +6,7 @@ Scanner scanner_init(LdrQuad *ldrquad, Servo *pan, Servo *tilt) {
 			.pan = pan,
 			.tilt = tilt
 	};
-//	servo_reset(scanner.pan);
-//	servo_reset(scanner.tilt);
+	servo_reset(scanner.pan);
+	servo_reset(scanner.tilt);
 	return scanner;
 }

@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "ldrquad.h"
 #include "servo.h"
+#include "scanner.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,6 +66,7 @@ const osThreadAttr_t blueBtnTask_attributes = {
 Servo pan;
 Servo tilt;
 LdrQuad ldrquad;
+Scanner scanner;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -124,9 +126,10 @@ int main(void)
 	/* USER CODE BEGIN 2 */
 	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
 	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
-	servo_reset(&pan);
-	servo_reset(&tilt);
+//	servo_reset(&pan);
+//	servo_reset(&tilt);
 	ldrquad = ldrquad_init(&hadc1, Error_Handler);
+	scanner = scanner_init(&ldrquad, &pan, &tilt);
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
@@ -496,7 +499,7 @@ void blue_btn_task(void *argument) {
 	while (1) {
 		thread_notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (thread_notification) {
-			ldrquad_read(&ldrquad);
+			ldrquad_read(scanner.ldrquad);
 		}
 	}
 }

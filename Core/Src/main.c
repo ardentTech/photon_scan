@@ -52,12 +52,20 @@ const osThreadAttr_t defaultTask_attributes = {
 		.priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-osThreadId_t greenLedTaskHandle;
-const osThreadAttr_t greenLedTask_attributes = {
-		.name = "greenLedTask",
+osThreadId_t blueBtnTaskHandle;
+const osThreadAttr_t blueBtnTask_attributes = {
+		.name = "blueBtnTask",
 		.stack_size = 256 * 4,
 		.priority = (osPriority_t) osPriorityNormal1,
 };
+//
+//osThreadId_t greenLedTaskHandle;
+//const osThreadAttr_t greenLedTask_attributes = {
+//		.name = "greenLedTask",
+//		.stack_size = 256 * 4,
+//		.priority = (osPriority_t) osPriorityNormal1,
+//};
+
 Servo pan;
 Servo tilt;
 /* USER CODE END PV */
@@ -70,7 +78,9 @@ static void MX_TIM3_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void GreenLedTask(void *argument);
+//void GreenLedTask(void *argument);
+void blue_btn_task(void *argument);
+void task_notify(TaskHandle_t task_handle);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -114,6 +124,8 @@ int main(void)
 	/* USER CODE BEGIN 2 */
 	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
 	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
+	servo_reset(&pan);
+	servo_reset(&tilt);
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
@@ -140,7 +152,8 @@ int main(void)
 	defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
-	greenLedTaskHandle = osThreadNew(GreenLedTask, NULL, &greenLedTask_attributes);
+	blueBtnTaskHandle = osThreadNew(blue_btn_task, NULL, &blueBtnTask_attributes);
+	//greenLedTaskHandle = osThreadNew(GreenLedTask, NULL, &greenLedTask_attributes);
 	/* USER CODE END RTOS_THREADS */
 
 	/* USER CODE BEGIN RTOS_EVENTS */
@@ -369,20 +382,48 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
 	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
+	/* EXTI interrupt init*/
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 	/* USER CODE BEGIN MX_GPIO_Init_2 */
 
 	/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-void GreenLedTask(void *argument) {
-	for(;;) {
-		servo_reset(&pan);
-		servo_reset(&tilt);
-		HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
-		osDelay(750);
-		HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_RESET);
-		osDelay(750);
+void task_notify(TaskHandle_t task_handle) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	// Notify the thread so it will wake up when the ISR is complete
+	vTaskNotifyGiveFromISR(task_handle, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void blue_btn_task(void *argument) {
+	static uint32_t thread_notification;
+	while (1) {
+		thread_notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		if (thread_notification) {
+			//scanner_toggle(&scanner);
+			HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
+		}
+	}
+}
+
+//void GreenLedTask(void *argument) {
+//	for(;;) {
+//		servo_reset(&pan);
+//		servo_reset(&tilt);
+//		HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
+//		osDelay(750);
+//		HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_RESET);
+//		osDelay(750);
+//	}
+//}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == USER_Btn_Pin) {
+		task_notify(blueBtnTaskHandle);
 	}
 }
 /* USER CODE END 4 */

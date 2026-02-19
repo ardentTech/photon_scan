@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "servo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +58,8 @@ const osThreadAttr_t greenLedTask_attributes = {
 		.stack_size = 256 * 4,
 		.priority = (osPriority_t) osPriorityNormal1,
 };
+Servo pan;
+Servo tilt;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,9 +112,8 @@ int main(void)
 	MX_GPIO_Init();
 	MX_TIM3_Init();
 	/* USER CODE BEGIN 2 */
-	//	HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
-	//	HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_SET);
-	//	HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_SET);
+	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
+	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
@@ -376,8 +377,8 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void GreenLedTask(void *argument) {
 	for(;;) {
-		TIM3->CCR1 = 1500;
-		TIM3->CCR2 = 1850;
+		servo_reset(&pan);
+		servo_reset(&tilt);
 		HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
 		osDelay(750);
 		HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_RESET);

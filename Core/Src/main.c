@@ -25,6 +25,8 @@
 #include "ldrquad.h"
 #include "servo.h"
 #include "scanner.h"
+#include "semphr.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +50,8 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim3;
 
+UART_HandleTypeDef huart3;
+
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -67,6 +71,7 @@ Servo pan;
 Servo tilt;
 LdrQuad ldrquad;
 Scanner scanner;
+SemaphoreHandle_t uartTxMutex;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,6 +81,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -123,13 +129,15 @@ int main(void)
 	MX_DMA_Init();
 	MX_TIM3_Init();
 	MX_ADC1_Init();
+	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
 	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
 	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
-//	servo_reset(&pan);
-//	servo_reset(&tilt);
+	//	servo_reset(&pan);
+	//	servo_reset(&tilt);
 	ldrquad = ldrquad_init(&hadc1, Error_Handler);
 	scanner = scanner_init(&ldrquad, &pan, &tilt);
+	uartTxMutex = xSemaphoreCreateMutex();
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
@@ -163,6 +171,7 @@ int main(void)
 	/* add events, ... */
 	/* USER CODE END RTOS_EVENTS */
 
+	printf("start scheduler...\r\n");
 	/* Start scheduler */
 	osKernelStart();
 
@@ -356,6 +365,41 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+ * @brief USART3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART3_UART_Init(void)
+{
+
+	/* USER CODE BEGIN USART3_Init 0 */
+
+	/* USER CODE END USART3_Init 0 */
+
+	/* USER CODE BEGIN USART3_Init 1 */
+
+	/* USER CODE END USART3_Init 1 */
+	huart3.Instance = USART3;
+	huart3.Init.BaudRate = 115200;
+	huart3.Init.WordLength = UART_WORDLENGTH_8B;
+	huart3.Init.StopBits = UART_STOPBITS_1;
+	huart3.Init.Parity = UART_PARITY_NONE;
+	huart3.Init.Mode = UART_MODE_TX_RX;
+	huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+	huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+	huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+	if (HAL_UART_Init(&huart3) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	/* USER CODE BEGIN USART3_Init 2 */
+
+	/* USER CODE END USART3_Init 2 */
+
+}
+
+/**
  * Enable DMA controller clock
  */
 static void MX_DMA_Init(void)
@@ -434,14 +478,6 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
 	HAL_GPIO_Init(RMII_TXD1_GPIO_Port, &GPIO_InitStruct);
 
-	/*Configure GPIO pins : STLK_RX_Pin STLK_TX_Pin */
-	GPIO_InitStruct.Pin = STLK_RX_Pin|STLK_TX_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-	GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
-	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
 	/*Configure GPIO pin : USB_PowerSwitchOn_Pin */
 	GPIO_InitStruct.Pin = USB_PowerSwitchOn_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -512,6 +548,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == USER_Btn_Pin) {
 		task_notify(blueBtnTaskHandle);
 	}
+}
+
+int _write(int file, char* ptr, int len) {
+	if (uartTxMutex) xSemaphoreTake(uartTxMutex, portMAX_DELAY);
+	HAL_UART_Transmit(&huart3, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+	if (uartTxMutex) xSemaphoreGive(uartTxMutex);
+	return len;
 }
 /* USER CODE END 4 */
 

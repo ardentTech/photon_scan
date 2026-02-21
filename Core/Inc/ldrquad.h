@@ -15,7 +15,7 @@
 
 typedef struct {
     ADC_HandleTypeDef *adc;
-    volatile uint16_t buffer[ADC_CHANNELS];
+    uint16_t buffer[ADC_CHANNELS];
 } LdrQuad;
 
 typedef struct {
@@ -25,7 +25,7 @@ typedef struct {
     uint16_t nw;
 } LdrQuadReading;
 
-LdrQuad ldrquad_init(ADC_HandleTypeDef *adc, void (*Error_Handler)(void));
-void ldrquad_read(volatile LdrQuad *ldrquad);
+void ldrquad_read(LdrQuad *ldrquad);
+LdrQuadReading ldrquad_get_reading(LdrQuad *ldrquad);
 
 #endif /* INC_LDRQUAD_H_ */

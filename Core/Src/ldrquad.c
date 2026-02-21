@@ -5,21 +5,14 @@
  *      Author: jondbaker
  */
 #include "ldrquad.h"
+#include <stdbool.h>
 
-LdrQuad ldrquad_init(ADC_HandleTypeDef *adc, void (*Error_Handler)(void)) {
-	LdrQuad ldrquad = {
-		.adc = adc,
-	};
+volatile bool dma_started = false;
 
-	// TODO might need to explicitly init .buffer
-
-	if (HAL_ADC_Start_DMA(ldrquad.adc, (uint32_t *)ldrquad.buffer, ADC_CHANNELS) != HAL_OK) {
-		Error_Handler();
+void ldrquad_read(LdrQuad *ldrquad) {
+	if (!dma_started) {
+		HAL_ADC_Start_DMA(ldrquad->adc, (uint32_t *)ldrquad->buffer, ADC_CHANNELS);
 	}
-	return ldrquad;
-}
-
-void ldrquad_read(volatile LdrQuad *ldrquad) {
     HAL_ADC_Start(ldrquad->adc);
 }
 

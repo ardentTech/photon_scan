@@ -71,6 +71,13 @@ osThreadId_t blueBtnTaskHandle;
 const osThreadAttr_t blueBtnTask_attributes = {
 		.name = "blueBtnTask",
 		.stack_size = 256 * 4,
+		.priority = (osPriority_t) osPriorityNormal2,
+};
+
+osThreadId_t scanner_task_handle;
+const osThreadAttr_t scanner_task_attributes = {
+		.name = "scanner_task",
+		.stack_size = 256 * 4,
 		.priority = (osPriority_t) osPriorityNormal1,
 };
 
@@ -92,11 +99,12 @@ static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void blue_btn_task(void *argument);
 void adc_init_task(void *argument);
+void blue_btn_task(void *argument);
 void blue_led_toggle(void);
 void green_led_toggle(void);
 void red_led_toggle(void);
+void scanner_task(void *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -170,6 +178,7 @@ int main(void)
 	/* USER CODE BEGIN RTOS_THREADS */
 	adc_init_task_handle = osThreadNew(adc_init_task, NULL, &adc_init_task_attributes);
 	blueBtnTaskHandle = osThreadNew(blue_btn_task, NULL, &blueBtnTask_attributes);
+	scanner_task_handle = osThreadNew(scanner_task, NULL, &scanner_task_attributes);
 	/* USER CODE END RTOS_THREADS */
 
 	/* USER CODE BEGIN RTOS_EVENTS */
@@ -532,21 +541,22 @@ void adc_init_task(void *argument) {
 	//blue_led_toggle();
 	MX_ADC1_Init();
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
-//	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
-//	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
-	ldrquad = ldrquad_init(&hadc1, Error_Handler);
-//	scanner = scanner_init(&ldrquad, &pan, &tilt);
+	//	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
+	//	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
+	//ldrquad = ldrquad_init(&hadc1, Error_Handler);
+	ldrquad = (LdrQuad) { .adc = &hadc1, .buffer = {0}};
+	//	scanner = scanner_init(&ldrquad, &pan, &tilt);
 	red_led_toggle();
 	vTaskDelete(NULL);
 }
 
 void blue_btn_task(void *argument) {
-	static uint32_t thread_notification;
+	static uint32_t notification;
 	while (1) {
-		thread_notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		if (thread_notification) {
+		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		if (notification) {
+			blue_led_toggle();
 			ldrquad_read(&ldrquad);
-			//blue_led_toggle();
 		}
 	}
 }
@@ -563,8 +573,26 @@ void red_led_toggle(void) {
 	HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 }
 
+void scanner_task(void *argument) {
+	static uint32_t notification;
+	static LdrQuadReading reading;
+
+	while (1) {
+		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		if (notification) {
+			red_led_toggle();
+			reading = ldrquad_get_reading(&ldrquad);
+			printf("%d, %d, %d, %d\r\n", reading.ne, reading.se, reading.sw, reading.nw);
+		}
+	}
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	green_led_toggle();
+	//green_led_toggle();
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	// Notify the thread so it will wake up when the ISR is complete
+	vTaskNotifyGiveFromISR(scanner_task_handle, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
@@ -660,6 +688,7 @@ void Error_Handler(void)
 {
 	/* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
+	printf("error :(\r\n");
 	__disable_irq();
 	while (1)
 	{

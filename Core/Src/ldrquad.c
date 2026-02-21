@@ -6,7 +6,7 @@
  */
 #include "ldrquad.h"
 
-LdrQuad ldrquad_init(ADC_HandleTypeDef* adc, void (*Error_Handler)(void)) {
+LdrQuad ldrquad_init(ADC_HandleTypeDef *adc, void (*Error_Handler)(void)) {
 	LdrQuad ldrquad = {
 		.adc = adc,
 	};
@@ -19,11 +19,11 @@ LdrQuad ldrquad_init(ADC_HandleTypeDef* adc, void (*Error_Handler)(void)) {
 	return ldrquad;
 }
 
-void ldrquad_read(LdrQuad* ldrquad) {
+void ldrquad_read(volatile LdrQuad *ldrquad) {
     HAL_ADC_Start(ldrquad->adc);
 }
 
-LdrQuadReading ldrquad_get_reading(LdrQuad* ldrquad) {
+LdrQuadReading ldrquad_get_reading(LdrQuad *ldrquad) {
     return (LdrQuadReading) {
         .ne = ldrquad->buffer[0],
 		.se = ldrquad->buffer[1],

@@ -60,6 +60,13 @@ const osThreadAttr_t defaultTask_attributes = {
 		.priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
+osThreadId_t adc_init_task_handle;
+const osThreadAttr_t adc_init_task_attributes = {
+		.name = "adc_init_task",
+		.stack_size = 256 * 4,
+		.priority = (osPriority_t) osPriorityHigh,
+};
+
 osThreadId_t blueBtnTaskHandle;
 const osThreadAttr_t blueBtnTask_attributes = {
 		.name = "blueBtnTask",
@@ -67,10 +74,10 @@ const osThreadAttr_t blueBtnTask_attributes = {
 		.priority = (osPriority_t) osPriorityNormal1,
 };
 
-Servo pan;
-Servo tilt;
-LdrQuad ldrquad;
-Scanner scanner;
+volatile Servo pan;
+volatile Servo tilt;
+volatile LdrQuad ldrquad;
+volatile Scanner scanner;
 SemaphoreHandle_t uartTxMutex;
 /* USER CODE END PV */
 
@@ -86,7 +93,10 @@ void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 void blue_btn_task(void *argument);
-void task_notify(TaskHandle_t task_handle);
+void adc_init_task(void *argument);
+void blue_led_toggle(void);
+void green_led_toggle(void);
+void red_led_toggle(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -128,15 +138,9 @@ int main(void)
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_TIM3_Init();
-	MX_ADC1_Init();
+	//MX_ADC1_Init();
 	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
-	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
-	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
-	//	servo_reset(&pan);
-	//	servo_reset(&tilt);
-	ldrquad = ldrquad_init(&hadc1, Error_Handler);
-	scanner = scanner_init(&ldrquad, &pan, &tilt);
 	uartTxMutex = xSemaphoreCreateMutex();
 	/* USER CODE END 2 */
 
@@ -164,6 +168,7 @@ int main(void)
 	defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
+	adc_init_task_handle = osThreadNew(adc_init_task, NULL, &adc_init_task_attributes);
 	blueBtnTaskHandle = osThreadNew(blue_btn_task, NULL, &blueBtnTask_attributes);
 	/* USER CODE END RTOS_THREADS */
 
@@ -523,11 +528,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void task_notify(TaskHandle_t task_handle) {
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	// Notify the thread so it will wake up when the ISR is complete
-	vTaskNotifyGiveFromISR(task_handle, &xHigherPriorityTaskWoken);
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+void adc_init_task(void *argument) {
+	//blue_led_toggle();
+	MX_ADC1_Init();
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
+//	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
+//	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
+	ldrquad = ldrquad_init(&hadc1, Error_Handler);
+//	scanner = scanner_init(&ldrquad, &pan, &tilt);
+	red_led_toggle();
+	vTaskDelete(NULL);
 }
 
 void blue_btn_task(void *argument) {
@@ -535,18 +545,34 @@ void blue_btn_task(void *argument) {
 	while (1) {
 		thread_notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (thread_notification) {
-			ldrquad_read(scanner.ldrquad);
+			ldrquad_read(&ldrquad);
+			//blue_led_toggle();
 		}
 	}
 }
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+void blue_led_toggle(void) {
+	HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
+}
+
+void green_led_toggle(void) {
 	HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
+}
+
+void red_led_toggle(void) {
+	HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	green_led_toggle();
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == USER_Btn_Pin) {
-		task_notify(blueBtnTaskHandle);
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		// Notify the thread so it will wake up when the ISR is complete
+		vTaskNotifyGiveFromISR(blueBtnTaskHandle, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 }
 

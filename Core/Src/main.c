@@ -150,6 +150,9 @@ int main(void)
 	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
 	uartTxMutex = xSemaphoreCreateMutex();
+	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
+	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
+
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
@@ -540,11 +543,8 @@ static void MX_GPIO_Init(void)
 void adc_init_task(void *argument) {
 	//blue_led_toggle();
 	MX_ADC1_Init();
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
-	//	pan = servo_init(&htim3, TIM_CHANNEL_1, 0, 180);
-	//	tilt = servo_init(&htim3, TIM_CHANNEL_2, 93, 177);
-	//ldrquad = ldrquad_init(&hadc1, Error_Handler);
-	ldrquad = (LdrQuad) { .adc = &hadc1, .buffer = {0}};
+	//vTaskDelay(1000 / portTICK_PERIOD_MS);
+	ldrquad = (LdrQuad) { .adc = &hadc1, .buffer = {0} };
 	//	scanner = scanner_init(&ldrquad, &pan, &tilt);
 	red_led_toggle();
 	vTaskDelete(NULL);
@@ -555,7 +555,8 @@ void blue_btn_task(void *argument) {
 	while (1) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
-			blue_led_toggle();
+			//blue_led_toggle();
+			ldrquad_start_dma(&ldrquad);
 			ldrquad_read(&ldrquad);
 		}
 	}

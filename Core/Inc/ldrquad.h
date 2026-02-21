@@ -25,7 +25,8 @@ typedef struct {
     uint16_t nw;
 } LdrQuadReading;
 
-void ldrquad_read(LdrQuad *ldrquad);
-LdrQuadReading ldrquad_get_reading(LdrQuad *ldrquad);
+void ldrquad_read(volatile LdrQuad *ldrquad);
+LdrQuadReading ldrquad_get_reading(volatile LdrQuad *ldrquad);
+void ldrquad_start_dma(volatile LdrQuad *ldrquad);
 
 #endif /* INC_LDRQUAD_H_ */

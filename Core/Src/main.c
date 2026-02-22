@@ -60,9 +60,9 @@ const osThreadAttr_t defaultTask_attributes = {
 		.priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-osThreadId_t adc_init_task_handle;
-const osThreadAttr_t adc_init_task_attributes = {
-		.name = "adc_init_task",
+osThreadId_t scanner_init_task_handle;
+const osThreadAttr_t scanner_init_task_attributes = {
+		.name = "scanner_init_task",
 		.stack_size = 256 * 4,
 		.priority = (osPriority_t) osPriorityHigh,
 };
@@ -99,12 +99,12 @@ static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void adc_init_task(void *argument);
 void blue_btn_task(void *argument);
 void blue_led_toggle(void);
 void green_led_toggle(void);
 void red_led_toggle(void);
 void scanner_task(void *argument);
+void scanner_init_task(void *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -179,7 +179,7 @@ int main(void)
 	defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
 	/* USER CODE BEGIN RTOS_THREADS */
-	adc_init_task_handle = osThreadNew(adc_init_task, NULL, &adc_init_task_attributes);
+	scanner_init_task_handle = osThreadNew(scanner_init_task, NULL, &scanner_init_task_attributes);
 	blueBtnTaskHandle = osThreadNew(blue_btn_task, NULL, &blueBtnTask_attributes);
 	scanner_task_handle = osThreadNew(scanner_task, NULL, &scanner_task_attributes);
 	/* USER CODE END RTOS_THREADS */
@@ -540,13 +540,15 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void adc_init_task(void *argument) {
+void scanner_init_task(void *argument) {
 	//blue_led_toggle();
 	MX_ADC1_Init();
 	//vTaskDelay(1000 / portTICK_PERIOD_MS);
 	ldrquad = (LdrQuad) { .adc = &hadc1, .buffer = {0} };
-	//	scanner = scanner_init(&ldrquad, &pan, &tilt);
-	red_led_toggle();
+	scanner = scanner_init(&ldrquad, &pan, &tilt);
+	// TODO i think this will kick off an ADC conversion, so might want to move into scanner
+	ldrquad_start_dma(scanner.ldrquad);
+	//red_led_toggle();
 	vTaskDelete(NULL);
 }
 
@@ -556,8 +558,8 @@ void blue_btn_task(void *argument) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
 			//blue_led_toggle();
-			ldrquad_start_dma(&ldrquad);
 			ldrquad_read(&ldrquad);
+			// TODO eventually start/stop a scanner sequence
 		}
 	}
 }

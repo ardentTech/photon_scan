@@ -36,17 +36,17 @@ uint16_t pulse_to_angle(const uint16_t pulse) {
 }
 
 // returns the current servo position as an angle
-uint8_t servo_angle(Servo* servo) {
+uint8_t servo_angle(Servo *servo) {
 	return pulse_to_angle(servo->pos);
 }
 
 // resets a servo to its neutral position
-void servo_reset(Servo* servo) {
+void servo_reset(volatile Servo *servo) {
 	servo_rotate(servo, MAX_ANGLE / 2);
 }
 
 // rotates a servo to a specific angle
-void servo_rotate(Servo* servo, uint8_t angle) {
+void servo_rotate(volatile Servo *servo, uint8_t angle) {
 	uint16_t new_pos = angle_to_pulse(angle);
 	if (new_pos < servo->min) {
 		new_pos = servo->min;

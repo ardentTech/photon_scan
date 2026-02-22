@@ -12,11 +12,11 @@
 #include "servo.h"
 
 typedef struct {
-    LdrQuad *ldrquad;
-    Servo *pan;
-    Servo *tilt;
+	volatile LdrQuad *ldrquad;
+	volatile Servo *pan;
+	volatile Servo *tilt;
 } Scanner;
 
-Scanner scanner_init(LdrQuad *ldrquad, Servo *pan, Servo *tilt);
+Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Servo *tilt);
 
 #endif /* SRC_SCANNER_H_ */

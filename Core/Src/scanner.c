@@ -1,6 +1,6 @@
 #include "scanner.h"
 
-Scanner scanner_init(LdrQuad *ldrquad, Servo *pan, Servo *tilt) {
+Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Servo *tilt) {
 	Scanner scanner = {
 			.ldrquad = ldrquad,
 			.pan = pan,

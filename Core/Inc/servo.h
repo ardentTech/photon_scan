@@ -29,6 +29,6 @@ Servo servo_init(
 );
 void servo_reset(volatile Servo *servo);
 void servo_rotate(volatile Servo *servo, uint8_t angle);
-uint8_t servo_angle(Servo *servo);
+uint8_t servo_angle(volatile Servo *servo);
 
 #endif /* INC_SERVO_H_ */

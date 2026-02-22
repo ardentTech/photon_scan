@@ -36,7 +36,7 @@ uint16_t pulse_to_angle(const uint16_t pulse) {
 }
 
 // returns the current servo position as an angle
-uint8_t servo_angle(Servo *servo) {
+uint8_t servo_angle(volatile Servo *servo) {
 	return pulse_to_angle(servo->pos);
 }
 

@@ -558,8 +558,7 @@ void blue_btn_task(void *argument) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
 			//blue_led_toggle();
-			ldrquad_read(&ldrquad);
-			// TODO eventually start/stop a scanner sequence
+			scanner_start(&scanner);
 		}
 	}
 }
@@ -576,6 +575,7 @@ void red_led_toggle(void) {
 	HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 }
 
+// Called when an ADC conversion completes
 void scanner_task(void *argument) {
 	static uint32_t notification;
 	static LdrQuadReading reading;
@@ -583,10 +583,22 @@ void scanner_task(void *argument) {
 	while (1) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
-			red_led_toggle();
-			reading = ldrquad_get_reading(&ldrquad);
-			printf("%d, %d, %d, %d\r\n", reading.ne, reading.se, reading.sw, reading.nw);
+			//red_led_toggle();
+			switch (scanner.state) {
+			case BUSY:
+				printf("BUSY\r\n");
+				scanner_step(&scanner);
+				break;
+			case DONE:
+				printf("DONE\r\n");
+				reading = ldrquad_get_reading(scanner.ldrquad);
+				printf("%d, %d, %d, %d\r\n", reading.ne, reading.se, reading.sw, reading.nw);
+				break;
+			default:
+				break;
+			}
 		}
+		//vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
 

@@ -586,13 +586,14 @@ void scanner_task(void *argument) {
 			//red_led_toggle();
 			switch (scanner.state) {
 			case BUSY:
-				printf("BUSY\r\n");
+				// TODO take reading
+				vTaskDelay(500 / portTICK_PERIOD_MS);
 				scanner_step(&scanner);
 				break;
 			case DONE:
 				printf("DONE\r\n");
-				reading = ldrquad_get_reading(scanner.ldrquad);
-				printf("%d, %d, %d, %d\r\n", reading.ne, reading.se, reading.sw, reading.nw);
+				//				reading = ldrquad_get_reading(scanner.ldrquad);
+				//				printf("%d, %d, %d, %d\r\n", reading.ne, reading.se, reading.sw, reading.nw);
 				break;
 			default:
 				break;
@@ -603,11 +604,13 @@ void scanner_task(void *argument) {
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	//green_led_toggle();
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	// Notify the thread so it will wake up when the ISR is complete
-	vTaskNotifyGiveFromISR(scanner_task_handle, &xHigherPriorityTaskWoken);
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	if (hadc == &hadc1) {
+		//green_led_toggle();
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		// Notify the thread so it will wake up when the ISR is complete
+		vTaskNotifyGiveFromISR(scanner_task_handle, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {

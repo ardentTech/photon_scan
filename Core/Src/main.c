@@ -578,11 +578,19 @@ void red_led_toggle(void) {
 // Called when an ADC conversion completes
 void scanner_task(void *argument) {
 	static uint32_t notification;
-	static LdrQuadReading reading;
+	static uint16_t avg_reading;
+	static uint16_t max_avg = 0;
+	static LdrQuadReading last_reading;
 
 	while (1) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
+			last_reading = ldrquad_raw_reading(scanner.ldrquad);
+			avg_reading = ldrquad_avg_reading(&last_reading);
+			if (avg_reading > max_avg) {
+				max_avg = avg_reading;
+			}
+
 			//red_led_toggle();
 			switch (scanner.state) {
 			case BUSY:
@@ -592,8 +600,8 @@ void scanner_task(void *argument) {
 				break;
 			case DONE:
 				printf("DONE\r\n");
-				//				reading = ldrquad_get_reading(scanner.ldrquad);
-				//				printf("%d, %d, %d, %d\r\n", reading.ne, reading.se, reading.sw, reading.nw);
+				printf("max_avg: %d\r\n", max_avg);
+				max_avg = 0;
 				break;
 			default:
 				break;

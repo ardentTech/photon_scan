@@ -6,7 +6,7 @@ void ldrquad_read(volatile LdrQuad *ldrquad) {
 }
 
 // Generates a reading from the buffer. This should be called once the ADC conversion is complete.
-LdrQuadReading ldrquad_get_reading(volatile LdrQuad *ldrquad) {
+LdrQuadReading ldrquad_raw_reading(volatile LdrQuad *ldrquad) {
     return (LdrQuadReading) {
         .ne = ldrquad->buffer[0],
 		.se = ldrquad->buffer[1],
@@ -18,4 +18,8 @@ LdrQuadReading ldrquad_get_reading(volatile LdrQuad *ldrquad) {
 // Starts the DMA associated with the ADC.
 void ldrquad_start_dma(volatile LdrQuad *ldrquad) {
 	HAL_ADC_Start_DMA(ldrquad->adc, (uint32_t *)ldrquad->buffer, ADC_CHANNELS);
+}
+
+uint16_t ldrquad_avg_reading(LdrQuadReading *reading) {
+	return (uint16_t)(reading->ne + reading->se + reading->sw + reading->nw) / 4;
 }

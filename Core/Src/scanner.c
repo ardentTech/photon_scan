@@ -28,12 +28,27 @@ Step sequence[STEPS_PER_SEQUENCE] = {
 };
 volatile Step *next_step = NULL;
 
+void scanner_analyze(volatile Scanner *scanner) {
+	LdrQuadReading last_reading = ldrquad_raw_reading(scanner->ldrquad);
+	uint16_t avg_reading = ldrquad_avg_reading(&last_reading);
+	if (avg_reading < scanner->result.min) {
+		scanner->result.min = avg_reading;
+	}
+	if (avg_reading > scanner->result.max) {
+		scanner->result.max = avg_reading;
+	}
+}
+
 Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Servo *tilt) {
 	Scanner scanner = {
 			.ldrquad = ldrquad,
 			.pan = pan,
 			.state = INIT,
-			.tilt = tilt
+			.tilt = tilt,
+			.result = (ScanResult) {
+				.min = UINT16_MAX,
+				.max = 0,
+			}
 	};
 	// TODO smooth these out
 	servo_rotate(scanner.pan, 0);
@@ -42,6 +57,10 @@ Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Se
 }
 
 void scanner_start(volatile Scanner *scanner) {
+	scanner->result = (ScanResult) {
+		.min = UINT16_MAX,
+		.max = 0,
+	};
 	scanner->state = BUSY;
 	next_step = sequence;
 	scanner_step(scanner);

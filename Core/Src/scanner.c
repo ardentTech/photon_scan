@@ -33,9 +33,11 @@ void scanner_analyze(volatile Scanner *scanner) {
 	uint16_t avg_reading = ldrquad_avg_reading(&last_reading);
 	if (avg_reading < scanner->result.min) {
 		scanner->result.min = avg_reading;
+		scanner->result.min_pos = (Position) { servo_angle(scanner->pan), servo_angle(scanner->tilt) };
 	}
 	if (avg_reading > scanner->result.max) {
 		scanner->result.max = avg_reading;
+		scanner->result.max_pos = (Position) { servo_angle(scanner->pan), servo_angle(scanner->tilt) };
 	}
 }
 
@@ -47,7 +49,9 @@ Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Se
 			.tilt = tilt,
 			.result = (ScanResult) {
 				.min = UINT16_MAX,
+				.min_pos = { 0, 0 },
 				.max = 0,
+				.max_pos = { 0, 0 },
 			}
 	};
 	// TODO smooth these out
@@ -59,7 +63,9 @@ Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Se
 void scanner_start(volatile Scanner *scanner) {
 	scanner->result = (ScanResult) {
 		.min = UINT16_MAX,
+		.min_pos = { 0, 0 },
 		.max = 0,
+		.max_pos = { 0, 0 },
 	};
 	scanner->state = BUSY;
 	next_step = sequence;

@@ -18,8 +18,15 @@ typedef enum {
 } ScannerState;
 
 typedef struct {
+	uint8_t pan;
+	uint8_t tilt;
+} Position;
+
+typedef struct {
 	uint16_t min;
+	Position min_pos;
 	uint16_t max;
+	Position max_pos;
 } ScanResult;
 
 typedef struct {

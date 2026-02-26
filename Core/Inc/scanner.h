@@ -14,6 +14,7 @@
 typedef enum {
 	INIT,
 	BUSY,
+	CANCELLED,
 	DONE,
 } ScannerState;
 
@@ -39,6 +40,7 @@ typedef struct {
 
 Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Servo *tilt);
 void scanner_start(volatile Scanner *scanner);
+void scanner_cancel(volatile Scanner *scanner);
 void scanner_step(volatile Scanner *scanner);
 void scanner_analyze(volatile Scanner *scanner);
 

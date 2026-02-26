@@ -10,19 +10,21 @@ typedef enum {
 	TILT_REVERSE,
 } Step;
 
+static void servo_forward(volatile Servo *servo);
+static void servo_reverse(volatile Servo *servo);
 static void step(volatile Scanner *scanner, Step step);
 
 Step sequence[STEPS_PER_SEQUENCE] = {
 		PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD,
-		PAN_FORWARD, PAN_FORWARD, TILT_FORWARD, // 108
+		PAN_FORWARD, PAN_FORWARD, TILT_FORWARD,
 		PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE,
-		PAN_REVERSE, PAN_REVERSE, TILT_FORWARD, // 126
+		PAN_REVERSE, PAN_REVERSE, TILT_FORWARD,
 		PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD,
-		PAN_FORWARD, PAN_FORWARD, TILT_FORWARD, // 144
+		PAN_FORWARD, PAN_FORWARD, TILT_FORWARD,
 		PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE,
-		PAN_REVERSE, PAN_REVERSE, TILT_FORWARD, // 162
+		PAN_REVERSE, PAN_REVERSE, TILT_FORWARD,
 		PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD, PAN_FORWARD,
-		PAN_FORWARD, PAN_FORWARD, TILT_FORWARD, // 180
+		PAN_FORWARD, PAN_FORWARD, TILT_FORWARD,
 		PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE, PAN_REVERSE,
 		PAN_REVERSE, PAN_REVERSE
 };
@@ -49,9 +51,9 @@ Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Se
 			.tilt = tilt,
 			.result = (ScanResult) {
 				.min = UINT16_MAX,
-				.min_pos = { 0, 0 },
-				.max = 0,
-				.max_pos = { 0, 0 },
+						.min_pos = { 0, 0 },
+						.max = 0,
+						.max_pos = { 0, 0 },
 			}
 	};
 	// TODO smooth these out
@@ -63,9 +65,9 @@ Scanner scanner_init(volatile LdrQuad *ldrquad, volatile Servo *pan, volatile Se
 void scanner_start(volatile Scanner *scanner) {
 	scanner->result = (ScanResult) {
 		.min = UINT16_MAX,
-		.min_pos = { 0, 0 },
-		.max = 0,
-		.max_pos = { 0, 0 },
+				.min_pos = { 0, 0 },
+				.max = 0,
+				.max_pos = { 0, 0 },
 	};
 	scanner->state = BUSY;
 	next_step = sequence;
@@ -84,19 +86,32 @@ void scanner_step(volatile Scanner *scanner) {
 	}
 }
 
+void scanner_cancel(volatile Scanner *scanner) {
+	next_step = NULL;
+	scanner->state = CANCELLED;
+}
+
 static void step(volatile Scanner *scanner, Step step) {
 	switch (step) {
 	case PAN_FORWARD:
-		servo_rotate(scanner->pan, servo_angle(scanner->pan) + DEGREES_PER_STEP);
+		servo_forward(scanner->pan);
 		break;
 	case PAN_REVERSE:
-		servo_rotate(scanner->pan, servo_angle(scanner->pan) - DEGREES_PER_STEP);
+		servo_reverse(scanner->pan);
 		break;
 	case TILT_FORWARD:
-		servo_rotate(scanner->tilt, servo_angle(scanner->tilt) + DEGREES_PER_STEP);
+		servo_forward(scanner->tilt);
 		break;
 	case TILT_REVERSE:
-		servo_rotate(scanner->tilt, servo_angle(scanner->tilt) - DEGREES_PER_STEP);
+		servo_reverse(scanner->tilt);
 		break;
 	}
+}
+
+static void servo_forward(volatile Servo *servo) {
+	servo_rotate(servo, servo_angle(servo) + DEGREES_PER_STEP);
+}
+
+static void servo_reverse(volatile Servo *servo) {
+	servo_rotate(servo, servo_angle(servo) - DEGREES_PER_STEP);
 }

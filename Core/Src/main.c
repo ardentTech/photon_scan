@@ -558,7 +558,11 @@ void blue_btn_task(void *argument) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
 			//blue_led_toggle();
-			scanner_start(&scanner);
+			if (scanner.state == BUSY) {
+				scanner_cancel(&scanner);
+			} else {
+				scanner_start(&scanner);
+			}
 		}
 	}
 }
@@ -578,29 +582,15 @@ void red_led_toggle(void) {
 // Called when an ADC conversion completes
 void scanner_task(void *argument) {
 	static uint32_t notification;
-//	static uint16_t avg_reading;
-//	static uint16_t min_avg = UINT16_MAX;
-//	static uint16_t max_avg = 0;
-//	static LdrQuadReading last_reading;
 
 	while (1) {
 		notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (notification) {
-//			last_reading = ldrquad_raw_reading(scanner.ldrquad);
-//			avg_reading = ldrquad_avg_reading(&last_reading);
-//			if (avg_reading < min_avg) {
-//				min_avg = avg_reading;
-//			}
-//			if (avg_reading > max_avg) {
-//				max_avg = avg_reading;
-//			}
-
 			scanner_analyze(&scanner);
 
 			//red_led_toggle();
 			switch (scanner.state) {
 			case BUSY:
-				// TODO take reading
 				vTaskDelay(500 / portTICK_PERIOD_MS);
 				scanner_step(&scanner);
 				break;
@@ -608,13 +598,13 @@ void scanner_task(void *argument) {
 				printf("DONE\r\n");
 				printf("min: %d\r\n", scanner.result.min);
 				printf("max: %d\r\n", scanner.result.max);
-				//max_avg = 0;
+				// TODO need switch+led for light mode vs dark mode
+				// TODO move servos to position of min/max
 				break;
 			default:
 				break;
 			}
 		}
-		//vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
 
